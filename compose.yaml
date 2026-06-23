@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_DB: cheap_flights
-      POSTGRES_USER: flights
-      POSTGRES_PASSWORD: flights
+      POSTGRES_DB: ${POSTGRES_DB:-cheap_flights}
+      POSTGRES_USER: ${POSTGRES_USER:-flights}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "5433:5432"
     volumes:
       - flight_locations:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U flights -d cheap_flights"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,7 +19,7 @@ services:
     build: .
     command: python -m cheap_flights_agent.import_locations
     environment:
-      DATABASE_URL: postgresql://flights:flights@postgres:5432/cheap_flights
+      DATABASE_URL: postgresql://${POSTGRES_USER:-flights}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-cheap_flights}
     depends_on:
       postgres:
         condition: service_healthy
@@ -28,7 +28,7 @@ services:
   app:
     build: .
     environment:
-      DATABASE_URL: postgresql://flights:flights@postgres:5432/cheap_flights
+      DATABASE_URL: postgresql://${POSTGRES_USER:-flights}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-cheap_flights}
       SERPAPI_API_KEY: ${SERPAPI_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}

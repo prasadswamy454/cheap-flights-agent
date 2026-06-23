@@ -10,9 +10,6 @@ import psycopg
 from psycopg.rows import dict_row
 
 
-DEFAULT_DATABASE_URL = "postgresql://flights:flights@127.0.0.1:5433/cheap_flights"
-
-
 @dataclass(frozen=True)
 class Location:
     code: str
@@ -135,7 +132,10 @@ def get_database_url(explicit_url: str | None = None) -> str:
     if explicit_url:
         return explicit_url
     _load_dotenv()
-    return os.getenv("DATABASE_URL") or DEFAULT_DATABASE_URL
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is required.")
+    return database_url
 
 
 def _load_dotenv() -> None:

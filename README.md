@@ -42,9 +42,13 @@ Requirements:
    SERPAPI_API_KEY=your-serpapi-key
    OPENAI_API_KEY=your-openai-api-key
    OPENAI_MODEL=gpt-5.5
+   POSTGRES_PASSWORD=replace-with-a-long-random-password
+   DATABASE_URL=postgresql://flights:replace-with-a-long-random-password@127.0.0.1:5433/cheap_flights
    ```
 
    `OPENAI_API_KEY` is optional. Without it, the app uses its local parser.
+   Use a URL-safe random database password and keep the password in
+   `DATABASE_URL` synchronized with `POSTGRES_PASSWORD`.
 
 3. Build and start the complete stack:
 
@@ -98,6 +102,8 @@ Run tests:
 | `OPENAI_MODEL` | No | Defaults to `gpt-5.5` |
 
 Never commit `.env` or API keys.
+
+See [SECURITY.md](SECURITY.md) for credential and disclosure guidance.
 
 ## Architecture
 
