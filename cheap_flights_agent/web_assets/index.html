@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cheap Flights Agent</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="search-panel" aria-label="Flight search">
+        <div class="brand-media">
+          <img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80" alt="Airplane wing above clouds">
+          <div class="brand-overlay">
+            <p class="eyebrow">AI fare scout</p>
+            <div class="brand-title">Live flight finder</div>
+          </div>
+          <div class="status-pill" id="statusPill">Live fares</div>
+        </div>
+
+        <form id="searchForm" class="search-form">
+          <label class="prompt-field">
+            <span>Describe your trip</span>
+            <textarea id="textRequest" rows="9" placeholder="Find a cheap 10-day round trip from New York to the Faroe Islands with a stopover in Iceland while coming back"></textarea>
+          </label>
+          <button class="search-button" id="askButton" type="submit">Find flights</button>
+        </form>
+
+        <section class="chat-history" aria-label="Previous chats">
+          <div class="chat-history-header">
+            <span>Previous chats</span>
+            <button id="clearChatsButton" type="button">Clear</button>
+          </div>
+          <div class="chat-history-list" id="chatHistoryList">
+            <p class="chat-history-empty">No previous chats yet.</p>
+          </div>
+        </section>
+      </section>
+
+      <section class="results-panel" aria-live="polite">
+        <div class="results-header">
+          <div>
+            <p class="eyebrow">Fare scout response</p>
+            <h2 id="resultsTitle">Ready when you are</h2>
+          </div>
+          <button class="ghost-button" id="newChatButton" type="button">New chat</button>
+        </div>
+
+        <div class="summary" id="summary">
+          <p>Describe the trip you have in mind and I will search live fares, choose promising dates when you are flexible, and explain the strongest options.</p>
+        </div>
+
+        <section class="follow-up" id="followUp" hidden aria-label="Follow-up conversation">
+          <div class="chat-thread" id="chatThread"></div>
+          <form class="follow-up-form" id="followUpForm">
+            <label>
+              <span>Ask about these results</span>
+              <input id="followUpInput" placeholder="Which option is fastest?" autocomplete="off">
+            </label>
+            <button class="follow-up-button" id="followUpButton" type="submit">Ask</button>
+          </form>
+        </section>
+
+        <div class="route-map" id="routeMap" hidden aria-label="Interactive route map"></div>
+
+        <div class="metrics" id="metrics" hidden>
+          <div><strong id="bestPrice">$0</strong><span>best fare</span></div>
+          <div><strong id="flightCount">0</strong><span>matches</span></div>
+          <div><strong id="tripType">One way</strong><span>trip type</span></div>
+        </div>
+
+        <div class="results-list" id="resultsList"></div>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

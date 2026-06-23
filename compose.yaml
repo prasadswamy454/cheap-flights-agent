@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: cheap_flights
+      POSTGRES_USER: flights
+      POSTGRES_PASSWORD: flights
+    ports:
+      - "5433:5432"
+    volumes:
+      - flight_locations:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flights -d cheap_flights"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  locations:
+    build: .
+    command: python -m cheap_flights_agent.import_locations
+    environment:
+      DATABASE_URL: postgresql://flights:flights@postgres:5432/cheap_flights
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://flights:flights@postgres:5432/cheap_flights
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
+    ports:
+      - "8000:8000"
+    depends_on:
+      locations:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  flight_locations:

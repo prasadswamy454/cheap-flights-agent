@@ -1,0 +1,16 @@
+alias,location_code,priority
+New York City,NYC,0
+Washington DC,WAS,0
+John F Kennedy,JFK,1
+John F Kennedy International,JFK,1
+Bombay,BOM,1
+Bangalore,BLR,1
+Madras,MAA,1
+Calcutta,CCU,1
+Cochin,COK,1
+New Delhi,DEL,1
+Faroe,FAE,1
+Faroe Islands,FAE,1
+Iceland,KEF,1
+Reykjavik,KEF,1
+Keflavik,KEF,1
