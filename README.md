@@ -101,6 +101,8 @@ Never commit `.env` or API keys.
 
 ## Architecture
 
+[View the high-level architecture diagram](docs/architecture.md).
+
 - `agent.py`: orchestration, fallback parsing, and natural-language summaries
 - `providers.py`: SerpApi flight and flexible-date integration
 - `llm.py`: OpenAI Structured Outputs interpretation
