@@ -20,6 +20,7 @@ flowchart LR
         end
 
         importer["Location Catalog Importer"]
+        alerts["Fare Alert Worker"]
         postgres[("PostgreSQL")]
     end
 
@@ -44,6 +45,8 @@ flowchart LR
     agent --> serpapi
     agent --> ranking
     ranking --> web
+    alerts --> serpapi
+    alerts --> postgres
 
     web --> ui
     web --> chat
@@ -69,5 +72,5 @@ flowchart LR
 - `app`: Python web application and static UI.
 - `postgres`: Persistent airport and location catalog.
 - `locations`: One-time OurAirports import job.
+- `alerts`: Scheduled fare checks and optional email notifications.
 - Browser storage: Saves recent conversations and result history locally.
-

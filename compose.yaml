@@ -32,8 +32,32 @@ services:
       SERPAPI_API_KEY: ${SERPAPI_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
     ports:
       - "8000:8000"
+    depends_on:
+      locations:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  alerts:
+    build: .
+    command: python -m cheap_flights_agent.alerts
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-flights}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-cheap_flights}
+      SERPAPI_API_KEY: ${SERPAPI_API_KEY}
+      ALERT_CHECK_INTERVAL_MINUTES: ${ALERT_CHECK_INTERVAL_MINUTES:-360}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
     depends_on:
       locations:
         condition: service_completed_successfully

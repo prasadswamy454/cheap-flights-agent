@@ -36,6 +36,16 @@
             <p class="chat-history-empty">No previous chats yet.</p>
           </div>
         </section>
+
+        <section class="fare-alerts" aria-label="Fare alerts">
+          <div class="chat-history-header">
+            <span>Fare alerts</span>
+            <button id="refreshAlertsButton" type="button">Refresh</button>
+          </div>
+          <div class="fare-alert-list" id="fareAlertList">
+            <p class="chat-history-empty">No fare alerts yet.</p>
+          </div>
+        </section>
       </section>
 
       <section class="results-panel" aria-live="polite">
@@ -44,7 +54,10 @@
             <p class="eyebrow">Fare scout response</p>
             <h2 id="resultsTitle">Ready when you are</h2>
           </div>
-          <button class="ghost-button" id="newChatButton" type="button">New chat</button>
+          <div class="header-actions">
+            <button class="ghost-button" id="fareAlertButton" type="button" hidden>Fare alert</button>
+            <button class="ghost-button" id="newChatButton" type="button">New chat</button>
+          </div>
         </div>
 
         <div class="summary" id="summary">
@@ -73,6 +86,28 @@
         <div class="results-list" id="resultsList"></div>
       </section>
     </main>
+
+    <dialog class="alert-dialog" id="alertDialog">
+      <form class="alert-form" id="alertForm">
+        <div>
+          <p class="eyebrow">Fare alert</p>
+          <h2>Watch this trip</h2>
+        </div>
+        <label>
+          <span>Notify me at or below</span>
+          <input id="alertTargetPrice" type="number" min="1" step="1" required>
+        </label>
+        <label>
+          <span>Email (optional)</span>
+          <input id="alertEmail" type="email" placeholder="you@example.com">
+        </label>
+        <p class="alert-note">Alerts are checked automatically. Email requires SMTP configuration; triggered alerts always appear in this list.</p>
+        <div class="dialog-actions">
+          <button class="ghost-button" id="cancelAlertButton" type="button">Cancel</button>
+          <button class="search-button" id="saveAlertButton" type="submit">Create alert</button>
+        </div>
+      </form>
+    </dialog>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="/app.js"></script>

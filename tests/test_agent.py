@@ -3,6 +3,12 @@ from dataclasses import replace
 from datetime import date, datetime, timedelta
 
 from cheap_flights_agent import CheapFlightsAgent, FlightOffer, TripRequest
+from cheap_flights_agent.alerts import (
+    FareAlert,
+    FareAlertChecker,
+    trip_request_from_payload,
+    trip_request_to_payload,
+)
 from cheap_flights_agent.agent import AgentResult, parse_trip_request
 from cheap_flights_agent.providers import (
     DemoFlightProvider,
@@ -109,6 +115,60 @@ class CheapFlightsAgentTest(unittest.TestCase):
         self.assertLessEqual(result.ranked_flights[0].offer.price_usd, 450)
         self.assertIn("The strongest value is", result.message)
         self.assertIn("The next best alternatives are", result.message)
+
+    def test_fare_alert_request_round_trip_serialization(self) -> None:
+        request = TripRequest(
+            origin="NYC",
+            destination="DEL",
+            depart_date=date(2026, 10, 11),
+            return_date=date(2026, 11, 10),
+            passengers=2,
+            cabin_class="business",
+            trip_duration_days=30,
+        )
+
+        restored = trip_request_from_payload(trip_request_to_payload(request))
+
+        self.assertEqual(restored, request)
+
+    def test_fare_alert_checker_marks_target_reached(self) -> None:
+        now = datetime.now()
+        alert = FareAlert(
+            id="00000000-0000-0000-0000-000000000001",
+            request=TripRequest(
+                origin="JFK",
+                destination="LAX",
+                depart_date=date(2026, 8, 12),
+                trip_type="one_way",
+            ),
+            target_price_usd=400,
+            email=None,
+            active=True,
+            current_price_usd=None,
+            lowest_price_usd=None,
+            airline=None,
+            booking_url=None,
+            status="watching",
+            last_error=None,
+            created_at=now,
+            last_checked_at=None,
+            triggered_at=None,
+        )
+
+        class FakeRepository:
+            def update_check(self, alert_id, **values):
+                self.values = values
+                return alert
+
+        repository = FakeRepository()
+        checker = FareAlertChecker(
+            repository=repository,
+            agent=CheapFlightsAgent(DemoFlightProvider()),
+        )
+        checker.check(alert)
+
+        self.assertEqual(repository.values["status"], "triggered")
+        self.assertEqual(repository.values["current_price_usd"], 319)
 
     def test_text_parser_understands_common_trip_request(self) -> None:
         agent = CheapFlightsAgent(DemoFlightProvider())

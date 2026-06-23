@@ -15,6 +15,7 @@ conversation.
 - Interactive route map
 - Ranked fare cards and natural-language recommendations
 - Follow-up comparisons, trip edits, undo, and saved browser chats
+- PostgreSQL-backed fare alerts with scheduled checks and optional email
 
 ## Run With Docker
 
@@ -44,11 +45,16 @@ Requirements:
    OPENAI_MODEL=gpt-5.5
    POSTGRES_PASSWORD=replace-with-a-long-random-password
    DATABASE_URL=postgresql://flights:replace-with-a-long-random-password@127.0.0.1:5433/cheap_flights
+   ALERT_CHECK_INTERVAL_MINUTES=360
    ```
 
    `OPENAI_API_KEY` is optional. Without it, the app uses its local parser.
    Use a URL-safe random database password and keep the password in
    `DATABASE_URL` synchronized with `POSTGRES_PASSWORD`.
+
+   To receive email when a target is reached, also configure `SMTP_HOST`,
+   `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM`. Email is
+   optional; alert status and prices are always stored in PostgreSQL.
 
 3. Build and start the complete stack:
 
@@ -100,6 +106,8 @@ Run tests:
 | `DATABASE_URL` | Local development | PostgreSQL connection string |
 | `OPENAI_API_KEY` | No | Enables LLM prompt interpretation |
 | `OPENAI_MODEL` | No | Defaults to `gpt-5.5` |
+| `ALERT_CHECK_INTERVAL_MINUTES` | No | Fare-alert polling interval; defaults to 360 |
+| `SMTP_*` | No | Optional email delivery for triggered alerts |
 
 Never commit `.env` or API keys.
 
@@ -115,6 +123,7 @@ See [SECURITY.md](SECURITY.md) for credential and disclosure guidance.
 - `locations.py`: PostgreSQL location repository
 - `import_locations.py`: OurAirports catalog importer
 - `web.py`: local HTTP server and JSON endpoints
+- `alerts.py`: PostgreSQL alert repository, checker, email sender, and worker
 - `web_assets/`: prompt UI, map, result cards, and chat history
 
 ## Data Sources

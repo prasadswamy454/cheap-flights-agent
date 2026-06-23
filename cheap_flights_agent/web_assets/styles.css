@@ -72,6 +72,11 @@ textarea {
   margin-bottom: 24px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .brand-media {
   border-radius: 8px;
   min-height: 220px;
@@ -179,6 +184,107 @@ h2 {
   border-top: 1px solid var(--line);
   margin-top: 24px;
   padding-top: 18px;
+}
+
+.fare-alerts {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.fare-alert-list {
+  display: grid;
+  gap: 8px;
+}
+
+.fare-alert-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 10px;
+}
+
+.fare-alert-item.triggered {
+  border-color: var(--accent);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.fare-alert-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fare-alert-copy strong {
+  font-size: 0.86rem;
+}
+
+.fare-alert-copy span,
+.fare-alert-copy small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.fare-alert-actions {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+
+.fare-alert-actions button {
+  border: 0;
+  border-radius: 4px;
+  background: var(--sky);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  min-height: 28px;
+  padding: 5px 7px;
+}
+
+.alert-dialog {
+  width: min(440px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(23, 32, 38, 0.25);
+  padding: 0;
+}
+
+.alert-dialog::backdrop {
+  background: rgba(23, 32, 38, 0.5);
+}
+
+.alert-form {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.alert-form h2 {
+  font-size: 1.5rem;
+}
+
+.alert-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-actions .search-button {
+  min-height: 42px;
+  padding: 9px 13px;
 }
 
 .chat-history-header {

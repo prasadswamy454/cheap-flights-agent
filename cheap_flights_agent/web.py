@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .agent import CheapFlightsAgent, extract_budget, parse_trip_request, resolve_location
+from .alerts import FareAlertChecker, FareAlertRepository, alert_to_payload
 from .models import FlightOffer, MultiCitySegment, TripRequest
 from .locations import get_location_repository
 from .llm import get_llm_interpreter
@@ -22,24 +23,60 @@ ASSET_DIR = Path(__file__).with_name("web_assets")
 
 class FlightsWebHandler(SimpleHTTPRequestHandler):
     agent: CheapFlightsAgent | None = None
+    alert_repository: FareAlertRepository | None = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(ASSET_DIR), **kwargs)
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/alerts":
+            try:
+                self._send_json(
+                    {"alerts": [alert_to_payload(alert) for alert in self._alerts().list()]}
+                )
+            except RuntimeError as exc:
+                self._send_json({"error": str(exc)}, status=503)
+            return
         if path == "/":
             self.path = "/index.html"
         super().do_GET()
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
-        if path not in {"/api/search", "/api/follow-up"}:
+        if path not in {"/api/search", "/api/follow-up", "/api/alerts"} and not re.fullmatch(
+            r"/api/alerts/[0-9a-f-]+/check",
+            path,
+        ):
             self.send_error(404, "Endpoint not found")
             return
 
         try:
             payload = self._read_json()
+            if path == "/api/alerts":
+                request_payload = payload.get("request")
+                if not isinstance(request_payload, dict):
+                    raise ValueError("A completed flight search is required.")
+                target_price = int(payload.get("targetPriceUsd") or 0)
+                if target_price <= 0:
+                    raise ValueError("Target price must be greater than zero.")
+                email = str(payload.get("email") or "").strip() or None
+                alert = self._alerts().create(
+                    _trip_request_from_context(request_payload),
+                    target_price,
+                    email,
+                )
+                self._send_json({"alert": alert_to_payload(alert)}, status=201)
+                return
+            check_match = re.fullmatch(r"/api/alerts/([0-9a-f-]+)/check", path)
+            if check_match:
+                alert = self._alerts().get(check_match.group(1))
+                if not alert:
+                    self._send_json({"error": "Fare alert was not found."}, status=404)
+                    return
+                checked = FareAlertChecker(self._alerts(), self._agent()).check(alert)
+                self._send_json({"alert": alert_to_payload(checked)})
+                return
             if path == "/api/follow-up":
                 self._send_json(_follow_up_response(payload, self._agent()))
                 return
@@ -66,10 +103,29 @@ class FlightsWebHandler(SimpleHTTPRequestHandler):
         except RuntimeError as exc:
             self._send_json({"error": str(exc)}, status=503)
 
+    def do_DELETE(self) -> None:
+        path = urlparse(self.path).path
+        match = re.fullmatch(r"/api/alerts/([0-9a-f-]+)", path)
+        if not match:
+            self.send_error(404, "Endpoint not found")
+            return
+        try:
+            if not self._alerts().delete(match.group(1)):
+                self._send_json({"error": "Fare alert was not found."}, status=404)
+                return
+            self._send_json({"deleted": True})
+        except RuntimeError as exc:
+            self._send_json({"error": str(exc)}, status=503)
+
     def _agent(self) -> CheapFlightsAgent:
         if self.__class__.agent is None:
             self.__class__.agent = CheapFlightsAgent(provider_from_env(require_live=True))
         return self.__class__.agent
+
+    def _alerts(self) -> FareAlertRepository:
+        if self.__class__.alert_repository is None:
+            self.__class__.alert_repository = FareAlertRepository()
+        return self.__class__.alert_repository
 
     def _read_json(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))

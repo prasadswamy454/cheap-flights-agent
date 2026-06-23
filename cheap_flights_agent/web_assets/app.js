@@ -18,6 +18,15 @@ const chatThread = document.querySelector("#chatThread");
 const newChatButton = document.querySelector("#newChatButton");
 const chatHistoryList = document.querySelector("#chatHistoryList");
 const clearChatsButton = document.querySelector("#clearChatsButton");
+const fareAlertButton = document.querySelector("#fareAlertButton");
+const fareAlertList = document.querySelector("#fareAlertList");
+const refreshAlertsButton = document.querySelector("#refreshAlertsButton");
+const alertDialog = document.querySelector("#alertDialog");
+const alertForm = document.querySelector("#alertForm");
+const alertTargetPrice = document.querySelector("#alertTargetPrice");
+const alertEmail = document.querySelector("#alertEmail");
+const cancelAlertButton = document.querySelector("#cancelAlertButton");
+const saveAlertButton = document.querySelector("#saveAlertButton");
 let currentSearch = null;
 let searchHistory = [];
 let currentChatId = null;
@@ -31,6 +40,7 @@ const chatStorageKey = "cheapFlightsChatsV1";
 const maxSavedChats = 8;
 
 renderChatHistory();
+loadFareAlerts();
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -75,6 +85,10 @@ form.addEventListener("submit", async (event) => {
 
 newChatButton.addEventListener("click", startNewChat);
 clearChatsButton.addEventListener("click", clearSavedChats);
+refreshAlertsButton.addEventListener("click", loadFareAlerts);
+fareAlertButton.addEventListener("click", openAlertDialog);
+cancelAlertButton.addEventListener("click", () => alertDialog.close());
+alertForm.addEventListener("submit", createFareAlert);
 
 followUpForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -159,6 +173,7 @@ function startNewChat() {
   followUpInput.value = "";
   chatThread.innerHTML = "";
   followUp.hidden = true;
+  fareAlertButton.hidden = true;
   metrics.hidden = true;
   routeMap.hidden = true;
   clearMapRoute();
@@ -168,6 +183,115 @@ function startNewChat() {
   setLoading(false);
   renderChatHistory();
   textRequest.focus();
+}
+
+function openAlertDialog() {
+  if (!currentSearch?.flights?.length) return;
+  alertTargetPrice.value =
+    currentSearch.request.budget_usd || currentSearch.flights[0].price_usd;
+  alertDialog.showModal();
+  alertTargetPrice.focus();
+}
+
+async function createFareAlert(event) {
+  event.preventDefault();
+  if (!currentSearch) return;
+  saveAlertButton.disabled = true;
+  saveAlertButton.textContent = "Creating...";
+  try {
+    const response = await fetch("/api/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        request: currentSearch.request,
+        targetPriceUsd: alertTargetPrice.value,
+        email: alertEmail.value.trim(),
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Could not create fare alert.");
+    alertDialog.close();
+    alertEmail.value = "";
+    await loadFareAlerts();
+  } catch (error) {
+    alertDialog.close();
+    appendChatMessage("assistant", error.message);
+  } finally {
+    saveAlertButton.disabled = false;
+    saveAlertButton.textContent = "Create alert";
+  }
+}
+
+async function loadFareAlerts() {
+  try {
+    const response = await fetch("/api/alerts");
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Could not load fare alerts.");
+    renderFareAlerts(payload.alerts || []);
+  } catch (error) {
+    fareAlertList.innerHTML = `<p class="chat-history-empty">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function renderFareAlerts(alerts) {
+  if (!alerts.length) {
+    fareAlertList.innerHTML = `<p class="chat-history-empty">No fare alerts yet.</p>`;
+    return;
+  }
+  fareAlertList.innerHTML = "";
+  alerts.forEach((alert) => {
+    const item = document.createElement("article");
+    item.className = `fare-alert-item ${alert.status === "triggered" ? "triggered" : ""}`;
+    const current = alert.currentPriceUsd
+      ? `Latest ${money(alert.currentPriceUsd)}`
+      : "Awaiting first check";
+    item.innerHTML = `
+      <div class="fare-alert-copy">
+        <strong>${escapeHtml(alert.request.origin)} to ${escapeHtml(alert.request.destination)}</strong>
+        <span>Target ${money(alert.targetPriceUsd)} &middot; ${escapeHtml(current)}</span>
+        <small>${escapeHtml(alertStatus(alert))}</small>
+      </div>
+      <div class="fare-alert-actions">
+        <button type="button" data-alert-check="${escapeAttribute(alert.id)}">Check now</button>
+        <button type="button" data-alert-delete="${escapeAttribute(alert.id)}" aria-label="Delete fare alert" title="Delete alert">&times;</button>
+      </div>
+    `;
+    item.querySelector("[data-alert-check]").addEventListener("click", () => checkFareAlert(alert.id));
+    item.querySelector("[data-alert-delete]").addEventListener("click", () => deleteFareAlert(alert.id));
+    fareAlertList.appendChild(item);
+  });
+}
+
+function alertStatus(alert) {
+  if (alert.status === "triggered") return "Target reached";
+  if (alert.status === "error") return alert.lastError || "Check failed";
+  if (alert.status === "no_results") return "No fares found on last check";
+  if (alert.lastCheckedAt) return `Checked ${formatSavedDate(alert.lastCheckedAt)}`;
+  return "Watching";
+}
+
+async function checkFareAlert(alertId) {
+  const response = await fetch(`/api/alerts/${encodeURIComponent(alertId)}/check`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    appendChatMessage("assistant", payload.error || "Could not check fare alert.");
+  }
+  await loadFareAlerts();
+}
+
+async function deleteFareAlert(alertId) {
+  const response = await fetch(`/api/alerts/${encodeURIComponent(alertId)}`, {
+    method: "DELETE",
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    appendChatMessage("assistant", payload.error || "Could not delete fare alert.");
+  }
+  await loadFareAlerts();
 }
 
 function loadSavedChats() {
@@ -330,6 +454,7 @@ function renderResults(payload, resetConversation = true) {
   renderNarrative(payload.message);
   if (resetConversation) chatThread.innerHTML = "";
   followUp.hidden = !flights.length;
+  fareAlertButton.hidden = !flights.length;
   if (flights.length && resetConversation) {
     appendChatMessage(
       "assistant",
@@ -366,6 +491,7 @@ function renderError(message) {
   resultsTitle.textContent = "I need one more detail";
   renderNarrative(message);
   followUp.hidden = true;
+  fareAlertButton.hidden = true;
   metrics.hidden = true;
   routeMap.hidden = true;
   clearMapRoute();
