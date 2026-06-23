@@ -27,6 +27,28 @@
           <button class="search-button" id="askButton" type="submit">Find flights</button>
         </form>
 
+        <section class="api-usage" aria-label="API usage">
+          <div class="chat-history-header">
+            <span>Live API usage</span>
+            <button id="refreshUsageButton" type="button">Refresh</button>
+          </div>
+          <div class="usage-grid">
+            <div>
+              <strong id="dailyUsage">--</strong>
+              <span>today</span>
+            </div>
+            <div>
+              <strong id="monthlyUsage">--</strong>
+              <span>this month</span>
+            </div>
+            <div>
+              <strong id="cacheEntries">--</strong>
+              <span>cached queries</span>
+            </div>
+          </div>
+          <p class="usage-note" id="usageNote">Loading usage controls...</p>
+        </section>
+
         <section class="chat-history" aria-label="Previous chats">
           <div class="chat-history-header">
             <span>Previous chats</span>

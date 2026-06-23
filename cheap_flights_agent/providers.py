@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import replace
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Iterable, List
+from typing import Any, Iterable, List
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -47,7 +47,12 @@ def provider_from_env(require_live: bool = False) -> FlightProvider:
     _load_dotenv()
     serpapi_key = os.getenv("SERPAPI_API_KEY")
     if serpapi_key:
-        return SerpApiFlightProvider(api_key=serpapi_key)
+        from .usage import ApiUsageManager
+
+        return SerpApiFlightProvider(
+            api_key=serpapi_key,
+            api_usage=ApiUsageManager.from_env(),
+        )
     if require_live:
         raise ProviderConfigurationError(
             "Set SERPAPI_API_KEY to search live Google Flights results."
@@ -63,10 +68,12 @@ class SerpApiFlightProvider(FlightProvider):
         api_key: str,
         base_url: str = "https://serpapi.com/search.json",
         timeout_seconds: int = 20,
+        api_usage: Any | None = None,
     ) -> None:
         self.api_key = api_key
         self.base_url = base_url
         self.timeout_seconds = timeout_seconds
+        self.api_usage = api_usage
 
     def search_with_request(
         self,
@@ -222,6 +229,11 @@ class SerpApiFlightProvider(FlightProvider):
         return mapped_offers
 
     def _get_json(self, query: dict[str, str]) -> dict:
+        if self.api_usage is not None:
+            return self.api_usage.get_json(query, lambda: self._fetch_json(query))
+        return self._fetch_json(query)
+
+    def _fetch_json(self, query: dict[str, str]) -> dict:
         request = Request(f"{self.base_url}?{urlencode(query)}", method="GET")
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:

@@ -27,6 +27,11 @@ const alertTargetPrice = document.querySelector("#alertTargetPrice");
 const alertEmail = document.querySelector("#alertEmail");
 const cancelAlertButton = document.querySelector("#cancelAlertButton");
 const saveAlertButton = document.querySelector("#saveAlertButton");
+const dailyUsage = document.querySelector("#dailyUsage");
+const monthlyUsage = document.querySelector("#monthlyUsage");
+const cacheEntries = document.querySelector("#cacheEntries");
+const usageNote = document.querySelector("#usageNote");
+const refreshUsageButton = document.querySelector("#refreshUsageButton");
 let currentSearch = null;
 let searchHistory = [];
 let currentChatId = null;
@@ -41,6 +46,7 @@ const maxSavedChats = 8;
 
 renderChatHistory();
 loadFareAlerts();
+loadApiUsage();
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -80,12 +86,14 @@ form.addEventListener("submit", async (event) => {
       searchController = null;
       setLoading(false);
     }
+    await loadApiUsage();
   }
 });
 
 newChatButton.addEventListener("click", startNewChat);
 clearChatsButton.addEventListener("click", clearSavedChats);
 refreshAlertsButton.addEventListener("click", loadFareAlerts);
+refreshUsageButton.addEventListener("click", loadApiUsage);
 fareAlertButton.addEventListener("click", openAlertDialog);
 cancelAlertButton.addEventListener("click", () => alertDialog.close());
 alertForm.addEventListener("submit", createFareAlert);
@@ -137,6 +145,7 @@ followUpForm.addEventListener("submit", async (event) => {
     followUpButton.disabled = false;
     followUpButton.textContent = "Ask";
     followUpInput.focus();
+    await loadApiUsage();
   }
 });
 
@@ -281,6 +290,36 @@ async function checkFareAlert(alertId) {
     appendChatMessage("assistant", payload.error || "Could not check fare alert.");
   }
   await loadFareAlerts();
+  await loadApiUsage();
+}
+
+async function loadApiUsage() {
+  try {
+    const response = await fetch("/api/usage");
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Usage unavailable.");
+    const usage = payload.usage;
+    dailyUsage.textContent = formatUsage(usage.dailyUsed, usage.dailyLimit);
+    monthlyUsage.textContent = formatUsage(usage.monthlyUsed, usage.monthlyLimit);
+    cacheEntries.textContent = String(usage.cacheEntries);
+    const remaining = usage.dailyLimit
+      ? Math.max(0, usage.dailyLimit - usage.dailyUsed)
+      : null;
+    usageNote.textContent = remaining === null
+      ? "Daily limit is disabled. Repeated searches use cached results."
+      : `${remaining} live provider call${remaining === 1 ? "" : "s"} left today. Cache hits do not count.`;
+    usageNote.classList.toggle("usage-warning", remaining !== null && remaining <= 10);
+  } catch (error) {
+    dailyUsage.textContent = "--";
+    monthlyUsage.textContent = "--";
+    cacheEntries.textContent = "--";
+    usageNote.textContent = error.message;
+    usageNote.classList.add("usage-warning");
+  }
+}
+
+function formatUsage(used, limit) {
+  return limit ? `${used} / ${limit}` : `${used} / unlimited`;
 }
 
 async function deleteFareAlert(alertId) {

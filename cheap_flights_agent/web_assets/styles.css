@@ -180,10 +180,52 @@ h2 {
   gap: 12px;
 }
 
-.chat-history {
+.chat-history,
+.api-usage {
   border-top: 1px solid var(--line);
   margin-top: 24px;
   padding-top: 18px;
+}
+
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.usage-grid div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.usage-grid div + div {
+  border-left: 1px solid var(--line);
+}
+
+.usage-grid strong {
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.usage-grid span,
+.usage-note {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.usage-note {
+  margin: 8px 0 0;
+}
+
+.usage-note.usage-warning {
+  color: #9b3b2e;
+  font-weight: 700;
 }
 
 .fare-alerts {

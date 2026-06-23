@@ -16,6 +16,7 @@ from .locations import get_location_repository
 from .llm import get_llm_interpreter
 from .providers import ProviderConfigurationError, ProviderSearchError, provider_from_env
 from .scoring import RankedFlight
+from .usage import ApiUsageLimitError, ApiUsageManager, usage_status_payload
 
 
 ASSET_DIR = Path(__file__).with_name("web_assets")
@@ -24,6 +25,7 @@ ASSET_DIR = Path(__file__).with_name("web_assets")
 class FlightsWebHandler(SimpleHTTPRequestHandler):
     agent: CheapFlightsAgent | None = None
     alert_repository: FareAlertRepository | None = None
+    usage_manager: ApiUsageManager | None = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(ASSET_DIR), **kwargs)
@@ -35,6 +37,12 @@ class FlightsWebHandler(SimpleHTTPRequestHandler):
                 self._send_json(
                     {"alerts": [alert_to_payload(alert) for alert in self._alerts().list()]}
                 )
+            except RuntimeError as exc:
+                self._send_json({"error": str(exc)}, status=503)
+            return
+        if path == "/api/usage":
+            try:
+                self._send_json({"usage": usage_status_payload(self._usage().status())})
             except RuntimeError as exc:
                 self._send_json({"error": str(exc)}, status=503)
             return
@@ -100,6 +108,8 @@ class FlightsWebHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": str(exc)}, status=503)
         except ProviderSearchError as exc:
             self._send_json({"error": str(exc)}, status=502)
+        except ApiUsageLimitError as exc:
+            self._send_json({"error": str(exc)}, status=429)
         except RuntimeError as exc:
             self._send_json({"error": str(exc)}, status=503)
 
@@ -126,6 +136,11 @@ class FlightsWebHandler(SimpleHTTPRequestHandler):
         if self.__class__.alert_repository is None:
             self.__class__.alert_repository = FareAlertRepository()
         return self.__class__.alert_repository
+
+    def _usage(self) -> ApiUsageManager:
+        if self.__class__.usage_manager is None:
+            self.__class__.usage_manager = ApiUsageManager.from_env()
+        return self.__class__.usage_manager
 
     def _read_json(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))

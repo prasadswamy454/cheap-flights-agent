@@ -16,6 +16,7 @@ conversation.
 - Ranked fare cards and natural-language recommendations
 - Follow-up comparisons, trip edits, undo, and saved browser chats
 - PostgreSQL-backed fare alerts with scheduled checks and optional email
+- Shared PostgreSQL API-response cache and configurable usage limits
 
 ## Run With Docker
 
@@ -46,6 +47,9 @@ Requirements:
    POSTGRES_PASSWORD=replace-with-a-long-random-password
    DATABASE_URL=postgresql://flights:replace-with-a-long-random-password@127.0.0.1:5433/cheap_flights
    ALERT_CHECK_INTERVAL_MINUTES=360
+   API_CACHE_TTL_MINUTES=360
+   API_DAILY_LIMIT=75
+   API_MONTHLY_LIMIT=900
    ```
 
    `OPENAI_API_KEY` is optional. Without it, the app uses its local parser.
@@ -107,6 +111,9 @@ Run tests:
 | `OPENAI_API_KEY` | No | Enables LLM prompt interpretation |
 | `OPENAI_MODEL` | No | Defaults to `gpt-5.5` |
 | `ALERT_CHECK_INTERVAL_MINUTES` | No | Fare-alert polling interval; defaults to 360 |
+| `API_CACHE_TTL_MINUTES` | No | Reuse identical provider responses for this many minutes; defaults to 360 |
+| `API_DAILY_LIMIT` | No | Maximum live provider calls per UTC day; defaults to 75, `0` disables |
+| `API_MONTHLY_LIMIT` | No | Maximum live provider calls per UTC month; defaults to 900, `0` disables |
 | `SMTP_*` | No | Optional email delivery for triggered alerts |
 
 Never commit `.env` or API keys.
@@ -124,6 +131,7 @@ See [SECURITY.md](SECURITY.md) for credential and disclosure guidance.
 - `import_locations.py`: OurAirports catalog importer
 - `web.py`: local HTTP server and JSON endpoints
 - `alerts.py`: PostgreSQL alert repository, checker, email sender, and worker
+- `usage.py`: shared response cache, atomic quotas, and usage reporting
 - `web_assets/`: prompt UI, map, result cards, and chat history
 
 ## Data Sources

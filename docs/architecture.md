@@ -17,6 +17,7 @@ flowchart LR
             interpreter["Trip Interpreter"]
             ranking["Fare Ranking and Summary"]
             locationRepo["Location Repository"]
+            apiControls["API Cache and Usage Controls"]
         end
 
         importer["Location Catalog Importer"]
@@ -42,10 +43,12 @@ flowchart LR
 
     agent --> locationRepo
     locationRepo --> postgres
-    agent --> serpapi
+    agent --> apiControls
+    apiControls --> postgres
+    apiControls --> serpapi
     agent --> ranking
     ranking --> web
-    alerts --> serpapi
+    alerts --> apiControls
     alerts --> postgres
 
     web --> ui
@@ -62,7 +65,7 @@ flowchart LR
 1. The traveler describes a trip in the browser.
 2. The Python API interprets the request with OpenAI Structured Outputs, with a local parser fallback.
 3. Locations are validated and resolved through PostgreSQL.
-4. SerpApi provides flexible-date and exact Google Flights results.
+4. PostgreSQL caching serves repeated searches before the quota controller allows a live SerpApi call.
 5. The agent enforces constraints, ranks fares, and produces a natural-language recommendation.
 6. The browser displays the recommendation, ranked flights, and interactive route map.
 7. Follow-up questions can compare existing results or trigger a refined fare search.
@@ -73,4 +76,5 @@ flowchart LR
 - `postgres`: Persistent airport and location catalog.
 - `locations`: One-time OurAirports import job.
 - `alerts`: Scheduled fare checks and optional email notifications.
+- API controls: Shared response cache plus atomic daily and monthly provider quotas.
 - Browser storage: Saves recent conversations and result history locally.

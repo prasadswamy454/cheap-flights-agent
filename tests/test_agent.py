@@ -29,6 +29,11 @@ from cheap_flights_agent.web import (
     _location_payload,
     _request_from_payload,
 )
+from cheap_flights_agent.usage import (
+    ApiUsageLimitError,
+    _cache_key,
+    enforce_usage_limits,
+)
 
 
 class CheapFlightsAgentTest(unittest.TestCase):
@@ -618,6 +623,57 @@ class CheapFlightsAgentTest(unittest.TestCase):
         self.assertEqual(provider.query["arrival_id"], "HYD")
         self.assertEqual(provider.query["type"], "2")
         self.assertEqual(provider.query["travel_class"], "1")
+
+    def test_serpapi_reuses_api_usage_cache(self) -> None:
+        class FakeUsageManager:
+            def __init__(self) -> None:
+                self.cache = {}
+                self.fetches = 0
+
+            def get_json(self, query, fetch):
+                key = _cache_key(query)
+                if key not in self.cache:
+                    self.fetches += 1
+                    self.cache[key] = fetch()
+                return self.cache[key]
+
+        class CachedProvider(SerpApiFlightProvider):
+            def __init__(self, usage) -> None:
+                super().__init__("secret-one", api_usage=usage)
+                self.network_calls = 0
+
+            def _fetch_json(self, query):
+                self.network_calls += 1
+                return {"best_flights": [], "other_flights": []}
+
+        usage = FakeUsageManager()
+        provider = CachedProvider(usage)
+        request = TripRequest(
+            origin="JFK",
+            destination="LAX",
+            depart_date=date(2026, 8, 12),
+            trip_type="one_way",
+        )
+
+        list(provider.search(request))
+        list(provider.search(request))
+
+        self.assertEqual(provider.network_calls, 1)
+        self.assertEqual(usage.fetches, 1)
+
+    def test_cache_key_does_not_include_api_key(self) -> None:
+        first = _cache_key({"engine": "google_flights", "api_key": "first", "type": "2"})
+        second = _cache_key({"engine": "google_flights", "api_key": "second", "type": "2"})
+
+        self.assertEqual(first, second)
+
+    def test_api_usage_limits_block_at_configured_threshold(self) -> None:
+        with self.assertRaises(ApiUsageLimitError):
+            enforce_usage_limits(75, 75, 400, 900)
+        with self.assertRaises(ApiUsageLimitError):
+            enforce_usage_limits(10, 75, 900, 900)
+
+        enforce_usage_limits(1000, 0, 1000, 0)
 
     def test_serpapi_search_query_builds_multi_city_json(self) -> None:
         class CapturingSerpApiProvider(SerpApiFlightProvider):
